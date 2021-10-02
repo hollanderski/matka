@@ -9,7 +9,7 @@
  </p>
 
 - Three.js is used to render a FBO particles system, with a GPGPU approach.
-- Particles are animated with the violin music thanks to ml5.js.
+- 75K Particles are animated with the violin music thanks to ml5.js.
 - The poem "Matka odchodzi" from Tadeusz Różewicz is displayed.
 
 <p>
