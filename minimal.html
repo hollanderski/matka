@@ -1,0 +1,537 @@
+
+
+<!DOCTYPE html>
+<html>
+<!-- https://velasquezdaniel.com/blog/rendering-100k-spheres-instantianing-and-draw-calls/ -->
+	<head>
+		<meta charset="utf-8">
+		
+		<style>
+			body { margin: 0; }
+		</style>
+	</head>
+	<body>
+	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/misc/GPUComputationRenderer.js"></script>
+	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/objects/Lensflare.js"></script>
+
+	  <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.21.3/build/postprocessing.min.js"></script>
+	  <!-- https://jsfiddle.net/hbarone/n1yxsLt6/59/ -->
+
+
+<script id="vshader" type="x-shader/x-vertex">
+
+	#define PI 3.14
+
+
+		precision highp float;
+		uniform float time;
+
+
+		attribute vec3 translate;
+		attribute vec2 reference;
+
+
+		varying vec2 vUv;
+		varying float vScale;
+
+
+
+
+		uniform sampler2D texturePosition;
+
+
+		void main() {
+
+
+			vec3 tmpPos = texture2D( texturePosition, reference ).xyz;
+
+			vec4 mvPosition = modelViewMatrix * vec4( tmpPos, 1.0 ); // translate pour aucun mouvement au lieu de tempPos
+			vec3 trTime = vec3(tmpPos.x + time,tmpPos.y + time,tmpPos.z + time);
+			float scale =  sin( trTime.x * 2.1 ) + sin( trTime.y * 3.2 ) + sin( trTime.z * 4.3 ); //2.1
+			vScale = scale;
+			scale = scale * 1. + 2.;//10.0;
+			mvPosition.xyz += (position)* scale;
+			vUv = uv;
+		
+
+	       
+			gl_Position = projectionMatrix * mvPosition;
+
+			
+
+		}
+	</script>
+	<script id="fshader" type="x-shader/x-fragment">
+
+
+		varying vec3 vNormal; 
+
+		precision highp float;
+
+		uniform sampler2D map;
+
+
+		varying vec2 vUv;
+		varying float vScale;
+
+		// HSL to RGB Convertion helpers
+		vec3 HUEtoRGB(float H){
+			H = mod(H,1.0);
+			float R = abs(H * 6.0 - 3.0) - 1.0;
+			float G = 2.0 - abs(H * 6.0 - 2.0);
+			float B = 2.0 - abs(H * 6.0 - 4.0);
+			return clamp(vec3(R,G,B),0.0,1.0);
+		}
+
+		vec3 HSLtoRGB(vec3 HSL){
+			vec3 RGB = HUEtoRGB(HSL.x);
+			float C = (1.0 - abs(2.0 * HSL.z - 1.0)) * HSL.y;
+			return (RGB - 0.5) * C + HSL.z;
+		}
+
+		void main() {
+
+
+			vec4 diffuseColor = texture2D( map, vUv);
+			gl_FragColor = vec4( diffuseColor.xyz * HSLtoRGB(vec3(vScale/2.0, 1.0, 1)), diffuseColor.w );
+
+			if ( diffuseColor.w < 0.5 ) discard;
+
+
+		}
+	</script>
+
+	
+
+	<script id="fragmentSimulation" type="x-shader/x-fragment">	
+
+#define USE_MAP
+
+uniform float time;
+uniform float delta;
+uniform sampler2D texturePosition;
+
+// curl noise variation
+//
+// Description : Array and textureless GLSL 2D simplex noise function.
+//      Author : Ian McEwan, Ashima Arts.
+//  Maintainer : ijm
+//     Lastmod : 20110822 (ijm)
+//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+//               Distributed under the MIT License. See LICENSE file.
+//               https://github.com/ashima/webgl-noise
+//
+
+vec3 mod289(vec3 x) {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec2 mod289(vec2 x) {
+    return x - floor(x * (1.0 / 289.0)) * 289.0;
+}
+
+vec3 permute(vec3 x) {
+    return mod289(((x*34.0)+1.0)*x);
+}
+
+float noise(vec2 v)
+{
+    const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+                      0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+                     -0.577350269189626,  // -1.0 + 2.0 * C.x
+                      0.024390243902439); // 1.0 / 41.0
+    // First corner
+    vec2 i  = floor(v + dot(v, C.yy) );
+    vec2 x0 = v -   i + dot(i, C.xx);
+
+    // Other corners
+    vec2 i1;
+    //i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+    //i1.y = 1.0 - i1.x;
+    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    // x0 = x0 - 0.0 + 0.0 * C.xx ;
+    // x1 = x0 - i1 + 1.0 * C.xx ;
+    // x2 = x0 - 1.0 + 2.0 * C.xx ;
+    vec4 x12 = x0.xyxy + C.xxzz;
+    x12.xy -= i1;
+
+    // Permutations
+    i = mod289(i); // Avoid truncation effects in permutation
+    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+        + i.x + vec3(0.0, i1.x, 1.0 ));
+
+    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+    m = m*m ;
+    m = m*m ;
+
+    // Gradients: 41 points uniformly over a line, mapped onto a diamond.
+    // The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+
+    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+    vec3 h = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 a0 = x - ox;
+
+    // Normalise gradients implicitly by scaling m
+    // Approximation of: m *= inversesqrt( a0*a0 + h*h );
+    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+
+    // Compute final noise value at P
+    vec3 g;
+    g.x  = a0.x  * x0.x  + h.x  * x0.y;
+    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+}
+
+vec3 curl(float	x,	float	y,	float	z)
+{
+
+    float	eps	= 1., eps2 = 2. * eps;
+    float	n1,	n2,	a,	b;
+
+    x += time * .05;
+    y += time * .05;
+    z += time * .05;
+
+    vec3	curl = vec3(0.);
+
+    n1	=	noise(vec2( x,	y	+	eps ));
+    n2	=	noise(vec2( x,	y	-	eps ));
+    a	=	(n1	-	n2)/eps2;
+
+    n1	=	noise(vec2( x,	z	+	eps));
+    n2	=	noise(vec2( x,	z	-	eps));
+    b	=	(n1	-	n2)/eps2;
+
+    curl.x	=	a	-	b;
+
+    n1	=	noise(vec2( y,	z	+	eps));
+    n2	=	noise(vec2( y,	z	-	eps));
+    a	=	(n1	-	n2)/eps2;
+
+    n1	=	noise(vec2( x	+	eps,	z));
+    n2	=	noise(vec2( x	+	eps,	z));
+    b	=	(n1	-	n2)/eps2;
+
+    curl.y	=	a	-	b;
+
+    n1	=	noise(vec2( x	+	eps,	y));
+    n2	=	noise(vec2( x	-	eps,	y));
+    a	=	(n1	-	n2)/eps2;
+
+    n1	=	noise(vec2(  y	+	eps,	z));
+    n2	=	noise(vec2(  y	-	eps,	z));
+    b	=	(n1	-	n2)/eps2;
+
+    curl.z	=	a	-	b;
+
+    return	curl;
+}
+
+
+varying vec2 vUv;
+
+void main() {
+    
+    vec2 uv = gl_FragCoord.xy / resolution.xy;
+
+    vec4 tmpPos = texture2D( texturePosition, uv );
+    vec3 pos = tmpPos.xyz;
+
+    float f = 1.; // poussiere = 10.
+    float amplitude = 0.001;
+    vec3 target = pos + amplitude*curl(f*pos.x, f*pos.y, f*pos.z);
+
+    gl_FragColor = vec4( target , 1. );
+}
+
+
+	</script>
+
+
+		<script>
+
+
+
+			const BOUNDS = 10, BOUNDS_HALF = BOUNDS / 2;
+
+
+			const scene = new THREE.Scene();
+
+			scene.add(new THREE.AmbientLight(0x333333));
+
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+
+			var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 5000 );
+			camera.position.z = 5000;
+			camera.position.x = 100;
+			camera.position.y = 100;
+
+			const controls = new THREE.OrbitControls( camera, renderer.domElement );
+			controls.update();
+			controls.minDistance = 0; // proximité mesh
+			controls.maxDistance = 5000;
+
+
+
+
+			var light = new THREE.DirectionalLight(0xffffff, 1);
+			light.position.set(5,3,5);
+			scene.add(light);
+
+			
+			
+			var sphere_geometry 
+			var material;
+			var sphere;
+
+
+			// FBO particles
+			const WIDTH = 64*4;
+			initGPGPU();
+
+			function initGPGPU(){
+				gpuCompute = new THREE.GPUComputationRenderer(WIDTH, WIDTH, renderer)
+				const dtPosition = gpuCompute.createTexture();
+				fillPositions(dtPosition)
+				positionVariable = gpuCompute.addVariable('texturePosition',  document.getElementById( 'fragmentSimulation' ).textContent, dtPosition)
+				positionVariable.material.uniforms['time'] = {value : 0.0};
+				positionVariable.material.uniforms[ 'delta' ] = { value: 0.0 };
+				positionVariable.wrapS = THREE.RepeatWrapping;
+				positionVariable.wrapT = THREE.RepeatWrapping; 
+				const error = gpuCompute.init();
+
+				if ( error !== null ) {
+
+					console.error( error );
+
+				}
+			}
+
+
+			// ================== LIGHT & POSTPROCESSING ================= /
+
+			let jesus
+
+			const geometryy = new THREE.SphereGeometry( 15, 32, 16 );
+					const materiall = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+					jesus = new THREE.Mesh( geometryy, materiall );
+					jesus.position.set( 0, 0, 0 );
+					scene.add( jesus );
+		
+
+		 const godraysOptions =  {
+           resolutionScale: 1,
+           blurriness: 0,
+           density: 10.8,
+           decay: 0.92,
+           weight: 0.45,
+           exposure: 0.75,
+           samples: 100
+       };
+        
+        composer = new POSTPROCESSING.EffectComposer(renderer);
+        
+        const renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+        
+        const godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, jesus, godraysOptions);
+        
+        godRaysPass = new POSTPROCESSING.EffectPass(camera, godraysEffect);
+
+        godRaysPass.renderToScreen = true;
+        
+        composer.addPass(renderPass);
+        composer.addPass(godRaysPass);
+
+
+
+        // =============== BUFFER GEOMETRY & PARTICLES ============= /
+
+
+
+			function fillPositions(texture){
+// radius : Float, tube : Float, radialSegments : Integer, tubularSegments : Integer, arc : Float
+// radius 1 et 3 ok
+				var model2 = new THREE.TorusBufferGeometry( 3., 1., 100, WIDTH*WIDTH );
+			var facePos = model2.attributes.position.array;
+			console.log(facePos);
+			var faceNumber = facePos.length/3;
+
+
+				let arr = texture.image.data;
+				for(let i=0; i < arr.length; i+=4){
+
+					let rand = Math.floor(Math.random()* faceNumber)
+					/*
+					let x = Math.random()// * BOUNDS - BOUNDS_HALF;
+					let y = Math.random() //* BOUNDS - BOUNDS_HALF;
+					let z = Math.random() //* BOUNDS - BOUNDS_HALF;
+					*/
+
+					let x = facePos[3*rand]
+					let y = facePos[3*rand+1]
+					let z = facePos[3*rand+2]
+
+					arr[i] = x;
+					arr[i+1] = y;
+					arr[i+2] = z;
+					arr[i+3] = 1;
+				}
+
+			}
+
+
+				const circleGeometry = new THREE.CircleGeometry(1, 32);
+
+				const geometry = new THREE.InstancedBufferGeometry();
+			geometry.index = circleGeometry.index;
+			geometry.attributes = circleGeometry.attributes;
+			geometry.computeVertexNormals();
+
+				const particleCount = WIDTH*WIDTH;//75000;
+
+			const translateArray = new Float32Array( particleCount * 3 );
+			let reference = new Float32Array( particleCount * 2 );
+
+			for ( var i = 0; i < particleCount; i ++ ) {
+
+				translateArray[ i + 0 ] = Math.random() * 10 - 1; // 50
+				translateArray[ i + 1 ] = Math.random() * 100 - 1; //200
+				translateArray[ i + 2 ] = Math.random() * 50 - 1; // 100
+
+				// uvs
+				let xx = (i%WIDTH)/WIDTH;
+				let yy = ~~(i/WIDTH)/WIDTH;
+
+				reference.set([xx,yy],i*2);
+
+			}
+
+
+			geometry.setAttribute( 'translate', new THREE.InstancedBufferAttribute( translateArray, 3 ) );
+			geometry.setAttribute( 'reference', new THREE.InstancedBufferAttribute( reference, 2 ) );
+
+			
+
+
+			var mytexture = new THREE.TextureLoader().load( 'test.jpg' );
+// cf https://jsfiddle.net/prisoner849/z3yfw208/
+			mytexture = new THREE.TextureLoader().load("https://threejs.org/examples/textures/sprites/ball.png", t => {
+   		 t.center.setScalar(0.5);
+    	t.rotation = -Math.PI * 0.5;
+    });
+			mytexture.mapping = THREE.SphericalReflectionMapping;
+
+			var phongShader = THREE.ShaderLib.phong;
+			var uniforms = THREE.UniformsUtils.clone(phongShader.uniforms)
+
+			var myuniform = ({
+					map: { value: mytexture },
+					time: new THREE.Uniform(0),
+					texturePosition: {value: null},
+					delta: { value: 0.0 },
+					resolution: {  type: 'v4', value: new THREE.Vector4() }
+				});
+
+
+
+			material = new THREE.ShaderMaterial( {
+				uniforms: myuniform,
+				vertexShader: document.getElementById( 'vshader' ).textContent,
+				fragmentShader: document.getElementById( 'fshader' ).textContent, 
+				depthTest: true,
+				depthWrite: true,
+				roughness: 1,
+				fog: true,
+				 extensions: {
+        derivatives: '#extension GL_OES_standard_derivatives :enable',
+      }
+			} );
+
+
+
+
+			mesh = new THREE.Mesh( geometry, material ) ; 
+			mesh.scale.set( 500, 500, 500 );
+			scene.add( mesh );
+
+
+
+		
+
+			var clock = new THREE.Clock();
+    		clock.start();
+
+    		function getStepSize( filterLen, tapsPerPass, pass ) {
+
+				return filterLen * Math.pow( tapsPerPass, - pass );
+
+			}
+
+			function filterGodRays( inputTex, renderTarget, stepSize ) {
+
+				postprocessing.scene.overrideMaterial = postprocessing.materialGodraysGenerate;
+
+				postprocessing.godrayGenUniforms[ "fStepSize" ].value = stepSize;
+				postprocessing.godrayGenUniforms[ "tInput" ].value = inputTex;
+
+				renderer.setRenderTarget( renderTarget );
+				renderer.render( postprocessing.scene, postprocessing.camera );
+				postprocessing.scene.overrideMaterial = null;
+
+			}
+
+
+
+
+
+
+			const animate = function () {
+
+			
+
+				const time = Date.now() * 0.0005;
+
+
+				//mesh.rotation.x = time * 0.25;
+				//mesh.rotation.y = time * 0.2;
+
+				//mesh.rotation.z = time * 0.2; 
+
+
+			
+				positionVariable.material.uniforms.time.value = clock.getElapsedTime();
+				gpuCompute.compute();
+
+				material.uniforms.texturePosition.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
+
+				let t =  clock.getElapsedTime();
+
+
+
+				mesh.geometry.attributes.position.needsUpdate = true;
+				mesh.geometry.attributes.translate.needsUpdate = true;
+				material.uniforms.needsUpdate = true;
+				material.needsUpdate = true; 
+
+
+
+				material.uniforms.time.value = t;
+
+				composer.render();
+
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render( scene, camera );
+			};
+
+			
+			animate();
+		</script>
+	</body>
+</html>
