@@ -1,28 +1,94 @@
-
-
 <!DOCTYPE html>
 <html>
 <!-- https://velasquezdaniel.com/blog/rendering-100k-spheres-instantianing-and-draw-calls/ -->
-	<head>
-		<meta charset="utf-8">
-		
-		<style>
-			body { margin: 0; }
-		</style>
-	</head>
-	<body>
-	<script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/misc/GPUComputationRenderer.js"></script>
-	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
-	<script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/objects/Lensflare.js"></script>
 
-	  <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.21.3/build/postprocessing.min.js"></script>
-	  <!-- https://jsfiddle.net/hbarone/n1yxsLt6/59/ -->
+<head>
+    <meta charset="utf-8">
+
+    <style>
 
 
-<script id="vshader" type="x-shader/x-vertex">
+    @font-face {
+  font-family: "myfont";
+  src: url("king.ttf");
+}
+        body {
+            margin: 0;
+        }
 
-	#define PI 3.14
+        #poem {
+  position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background-color: rgba(76, 175, 80, 0.) ;/* #f00;*/
+            padding: 3%;
+            text-align: center;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 40px;
+            font-family: "myfont";
+}
+/*
+.fadeanim{
+  position: absolute;
+} */
+.fadeanim.visible{
+  animation-name: fade;
+  animation-fill-mode: none; /*both */
+  animation-iteration-count: 1;
+  animation-duration: 5s;
+  animation-direction: reverse;/*alternate-reverse; */ 
+}
+
+.visible {
+  visibility: visible;
+}
+
+.not-visible {
+  visibility: hidden;
+}
+
+
+/*
+.fadeanim:nth-child(2){
+  animation-name: fade;
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+  animation-duration: 5s;
+  animation-direction: alternate;
+}*/
+
+@keyframes fade{
+    0%,50% {
+      opacity: 1;
+}
+    100%{
+      opacity: 0;
+  }
+}
+
+    </style>
+</head>
+
+<body>
+
+		<div id="myscene"></div>
+		<div id="poem"></div>
+
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/build/three.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/misc/GPUComputationRenderer.js"></script>
+    <script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/controls/OrbitControls.js"></script>
+    <script type="text/javascript" src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/objects/Lensflare.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/postprocessing@6.21.3/build/postprocessing.min.js"></script>
+    <!-- https://jsfiddle.net/hbarone/n1yxsLt6/59/ -->
+
+
+    <script id="vshader" type="x-shader/x-vertex">
+
+        #define PI 3.14
 
 
 		precision highp float;
@@ -63,10 +129,10 @@
 
 		}
 	</script>
-	<script id="fshader" type="x-shader/x-fragment">
+    <script id="fshader" type="x-shader/x-fragment">
 
 
-		varying vec3 vNormal; 
+        varying vec3 vNormal; 
 
 		precision highp float;
 
@@ -103,11 +169,11 @@
 		}
 	</script>
 
-	
 
-	<script id="fragmentSimulation" type="x-shader/x-fragment">	
 
-#define USE_MAP
+    <script id="fragmentSimulation" type="x-shader/x-fragment">
+
+        #define USE_MAP
 
 uniform float time;
 uniform float delta;
@@ -250,101 +316,276 @@ void main() {
 
 	</script>
 
+<script type="text/javascript">
 
-		<script>
+	var index = 0;
+	let interval;
+	var words = ["Teraz,", "kiedy pisze te słowa,", "oczy matki spoczywają na mnie."," ","Te oczy, uważne i czuje pytają milcząc", "\"co cię martwi synku...?\"" ,"",
+	"Odpowiadam z uśmiechem","\"nic...","wszystko w porządku, naprawdę, Mamo\",","\"no powiedz – mówi Matka – co cie trapi?\"" ,"Odwracam głowę, patrzę przez okno","",
+	"Oczy matki wszystko widzące"/*,
+	"patrzą na urodziny",
+	"patrzą przez całe życie",
+	"i patrzą po śmierci z \"tamtego świata\".",
+	"Nawet jeśli syn",
+	"zamieniony został w maszynę do zabijania",
+	"albo zwierzę mordercę",
+	"oczy matki patrzą na niego z miłością...",
+	"patrzą.","",
+	"Kiedy matka odwróci oczy od swojego dziecka,",
+	"dziecko zaczyna błądzić",
+	"i ginie w świecie pozbawionym miłości i ciepła","",
+
+	"Przez wiele lat obiecywałem Mamie trzy rzeczy,",
+	"że zaproszę ją do Krakowa,",
+	"że pokażę Zakopane i góry,",
+	"że pojadę z Mamą nad morze.", "",
+
+	"Mama nie zobaczyła nigdy w życiu Krakowa.",
+	"Nie widziała ani Krakowa ani gór",
+	"(z Morskim Okiem w środku)",
+	"ani morza.",
+	"Nie dotrzymałem obietnic...","",
+	"Minęło od śmierci Mamy prawie pół wieku...",
+	"Czemu Jej nie zawiozłem do Krakowa i nie pokazałem Sukiennic,",
+	"kościoła Mariackiego,",
+	"Wawelu... Wisły.","",
+	"Mama nie widziała Warszawy.",
+	"Mama nigdy nie leciała samolotem,",
+	"nie płynęła statkiem.",
+	"Nigdy nie byłem z Mamą w cukierni, w restauracji, w kawiarni, w teatrze, operze...",
+	"Ani na koncercie...",
+	"byłem poetą...","",
+	"Nie zawiozłem Mamy nad morze...",
+	"nie usiadłem z nią nad brzegiem,",
+	"nie przyniosłem muszelki albo bursztynowego kamyczka.",
+	"Nic...",
+	"i ona nigdy nie zobaczy morza...",
+	"i nigdy nie zobaczę jej Twarzy i oczu i uśmiechu kiedy patrzy na morze...",
+	"poeta." */
+	]
+
+	var motcount = -1;
+	var timeParagraph = 60000;
+	var timeWord = 3000
+	var timeSentence = timeWord*5
+	var shadowing=false;
+	var message ="";
+/*
+	if(poem[iteration]=="" && !tim){
+	tim=true
+	setTimeout(function() { iteration++; tim=false;}, timebetweenparagraphs);
+
+	}
+	else if(poem[iteration]!=""){
+	text(poem[iteration], frequency,fft.getEnergy(frequency));
+	}
 
 
+*/
 
-			const BOUNDS = 10, BOUNDS_HALF = BOUNDS / 2;
-
-
-			const scene = new THREE.Scene();
-
-			scene.add(new THREE.AmbientLight(0x333333));
-
-			renderer = new THREE.WebGLRenderer();
-			renderer.setSize( window.innerWidth, window.innerHeight );
-			document.body.appendChild( renderer.domElement );
+ function extraire(){
 
 
-			var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 5000 );
-			camera.position.z = 5000;
-			camera.position.x = 100;
-			camera.position.y = 100;
+/*
+ 		text = document.createElement("span");
+ 		text.innerHTML = message;
+        document.body.appendChild(text);
+  		width = Math.ceil(text.clientWidth);
+        formattedWidth = width + "px";
+        console.log(formattedWidth)
+  		document.body.removeChild(text);
+*/
 
-			const controls = new THREE.OrbitControls( camera, renderer.domElement );
-			controls.update();
-			controls.minDistance = 0; // proximité mesh
-			controls.maxDistance = 5000;
+	console.log("motcount", motcount)
+
+                if( ++motcount < message.length ){  
+                // On incremente i et on compare a la taille du message.
+                    // Si i ne depasse pas le nombre de caracteres dans le message
+                    // Note : le premier caractere de la chaine commence a l'index 0
+                    if( message[motcount] == '\n' ){
+                        // Si saut de ligne on remplace par l'equivalent HTML : "<br/>".
+                        document.getElementById("poem").innerHTML += '<br/>';
+                    } else {
+
+/*
+                    	  const el = document.querySelectorAll('span');
+						  if (el) {
+						  	mylist=[...el]; // converts NodeList to Array
+							mylist.forEach(mot => {
+								if(mot.classList.contains("fadeanim"))	
+								    mot.classList.remove("fadeanim");
+							});
+
+						  }  */
+
+						if(document.querySelectorAll('span')[motcount]){
+							if(document.querySelectorAll('span')[motcount-1]){
+								console.log(document.querySelectorAll('span')[motcount-1].classList)
+								document.querySelectorAll('span')[motcount-1].classList.remove("fadeanim");
+							}
+					
+							if(shadowing)
+								document.querySelectorAll('span')[motcount].style["animation-duration"] ="1s";
+							document.querySelectorAll('span')[motcount].classList.add("fadeanim");
+							document.querySelectorAll('span')[motcount].classList.add("visible");
+							document.querySelectorAll('span')[motcount].classList.remove("not-visible");
+
+						}
+					
+                        // Sinon on ajoute simplement le caractere a l'emplacement courant.
+                        /*
+                        document.getElementById("poem").innerHTML +='<span class="fadeanim">' +message[motcount]+ '</span>'; */
+
+                    }
+                } else {
+                    // Sinon on arrete le timer car le texte a fini de s'afficher.
+                    document.getElementById("poem").innerHTML="";
+                    clearTimeout(interval);
+                }
+            }
+             
+            // On incremente i en debut de fonction, il vaudra donc 0 a la premiere execution.
+        
 
 
-
-
-			var light = new THREE.DirectionalLight(0xffffff, 1);
-			light.position.set(5,3,5);
-			scene.add(light);
-
-			
-			
-			var sphere_geometry 
-			var material;
-			var sphere;
-
-
-			// FBO particles
-			const WIDTH = 64*4;
-			initGPGPU();
-
-			function initGPGPU(){
-				gpuCompute = new THREE.GPUComputationRenderer(WIDTH, WIDTH, renderer)
-				const dtPosition = gpuCompute.createTexture();
-				fillPositions(dtPosition)
-				positionVariable = gpuCompute.addVariable('texturePosition',  document.getElementById( 'fragmentSimulation' ).textContent, dtPosition)
-				positionVariable.material.uniforms['time'] = {value : 0.0};
-				positionVariable.material.uniforms[ 'delta' ] = { value: 0.0 };
-				positionVariable.wrapS = THREE.RepeatWrapping;
-				positionVariable.wrapT = THREE.RepeatWrapping; 
-				const error = gpuCompute.init();
-
-				if ( error !== null ) {
-
-					console.error( error );
-
-				}
-			}
-
-
-			// ================== LIGHT & POSTPROCESSING ================= /
-
-			let jesus
-
-			const geometryy = new THREE.SphereGeometry( 15, 32, 16 );
-					const materiall = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-					jesus = new THREE.Mesh( geometryy, materiall );
-					jesus.position.set( 0, 0, 0 );
-					scene.add( jesus );
+	function poetry(){
 		
+		// Loop on sentences
 
-		 const godraysOptions =  {
-           resolutionScale: 1,
-           blurriness: 0,
-           density: 10.8,
-           decay: 0.92,
-           weight: 0.45,
-           exposure: 0.75,
-           samples: 100
-       };
-        
+		setInterval(function(){
+			//where.textContent = words[index];
+
+			message = words[index].split(/(\s+)/); 
+
+	 		message.forEach(mot => {
+	 			console.log(mot)
+				document.getElementById("poem").innerHTML +='<span class="not-visible">' +mot+ '</span>';
+			}); // not-visible
+
+
+
+			//document.getElementById("poem").innerHTML="";
+			 //document.getElementById("poem").textContent = '';
+			 motcount = -1;
+
+			 // Loop on words
+			interval = setInterval(extraire, timeWord);
+			index++; 
+			if(index>=words.length){
+				index=0;
+				shadowing=true;
+				timeSentence=5000;
+				timeWord=1000;
+				// y 99 -> 55, x 99 -> 0 , z 5000 -> 0
+			}
+		}, timeSentence);
+	}
+
+	poetry();
+
+</script>
+
+    <script>
+        const BOUNDS = 10, BOUNDS_HALF = BOUNDS / 2;
+
+
+        const scene = new THREE.Scene();
+
+        scene.add(new THREE.AmbientLight(0x333333));
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+       	const myscene = document.getElementById("myscene")
+        //document.body
+        myscene.appendChild(renderer.domElement);
+
+
+        var camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+        camera.position.z = 5000;
+        camera.position.x = 100;
+        camera.position.y = 100;
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.update();
+        controls.minDistance = 0; // proximité mesh
+        controls.maxDistance = 5000;
+
+
+
+
+        var light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 3, 5);
+        scene.add(light);
+
+
+
+        var sphere_geometry
+        var material;
+        var sphere;
+
+
+        // FBO particles
+        const WIDTH = 64 * 4;
+        initGPGPU();
+
+        function initGPGPU() {
+            gpuCompute = new THREE.GPUComputationRenderer(WIDTH, WIDTH, renderer)
+            const dtPosition = gpuCompute.createTexture();
+            fillPositions(dtPosition)
+            positionVariable = gpuCompute.addVariable('texturePosition', document.getElementById('fragmentSimulation').textContent, dtPosition)
+            positionVariable.material.uniforms['time'] = {
+                value: 0.0
+            };
+            positionVariable.material.uniforms['delta'] = {
+                value: 0.0
+            };
+            positionVariable.wrapS = THREE.RepeatWrapping;
+            positionVariable.wrapT = THREE.RepeatWrapping;
+            const error = gpuCompute.init();
+
+            if (error !== null) {
+
+                console.error(error);
+
+            }
+        }
+
+
+        // ================== LIGHT & POSTPROCESSING ================= /
+
+        let colorval = 255
+        let jesus
+
+        const geometryy = new THREE.SphereGeometry(15, 32, 16);
+        const materiall = new THREE.MeshBasicMaterial({
+            color: 0xffffff
+        });
+        jesus = new THREE.Mesh(geometryy, materiall);
+        jesus.position.set(0, 0, 0);
+        scene.add(jesus);
+
+
+        const godraysOptions = {
+            resolutionScale: 1,
+            blurriness: 0,
+            density: 10.8,
+            decay: 0.92,
+            weight: 0.45,
+            exposure: 0.75,
+            samples: 100
+        };
+
         composer = new POSTPROCESSING.EffectComposer(renderer);
-        
+
         const renderPass = new POSTPROCESSING.RenderPass(scene, camera);
-        
+
         const godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, jesus, godraysOptions);
-        
+
         godRaysPass = new POSTPROCESSING.EffectPass(camera, godraysEffect);
 
         godRaysPass.renderToScreen = true;
-        
+
         composer.addPass(renderPass);
         composer.addPass(godRaysPass);
 
@@ -354,184 +595,212 @@ void main() {
 
 
 
-			function fillPositions(texture){
-// radius : Float, tube : Float, radialSegments : Integer, tubularSegments : Integer, arc : Float
-// radius 1 et 3 ok
-				var model2 = new THREE.TorusBufferGeometry( 3., 1., 100, WIDTH*WIDTH );
-			var facePos = model2.attributes.position.array;
-			console.log(facePos);
-			var faceNumber = facePos.length/3;
+        function fillPositions(texture) {
+            // radius : Float, tube : Float, radialSegments : Integer, tubularSegments : Integer, arc : Float
+            // radius 1 et 3 ok
+            var model2 = new THREE.TorusBufferGeometry(3., 1., 100, WIDTH * WIDTH);
+            var facePos = model2.attributes.position.array;
+            console.log(facePos);
+            var faceNumber = facePos.length / 3;
 
 
-				let arr = texture.image.data;
-				for(let i=0; i < arr.length; i+=4){
+            let arr = texture.image.data;
+            for (let i = 0; i < arr.length; i += 4) {
 
-					let rand = Math.floor(Math.random()* faceNumber)
-					/*
-					let x = Math.random()// * BOUNDS - BOUNDS_HALF;
-					let y = Math.random() //* BOUNDS - BOUNDS_HALF;
-					let z = Math.random() //* BOUNDS - BOUNDS_HALF;
-					*/
+                let rand = Math.floor(Math.random() * faceNumber)
+                /*
+                let x = Math.random()// * BOUNDS - BOUNDS_HALF;
+                let y = Math.random() //* BOUNDS - BOUNDS_HALF;
+                let z = Math.random() //* BOUNDS - BOUNDS_HALF;
+                */
 
-					let x = facePos[3*rand]
-					let y = facePos[3*rand+1]
-					let z = facePos[3*rand+2]
+                let x = facePos[3 * rand]
+                let y = facePos[3 * rand + 1]
+                let z = facePos[3 * rand + 2]
 
-					arr[i] = x;
-					arr[i+1] = y;
-					arr[i+2] = z;
-					arr[i+3] = 1;
+                arr[i] = x;
+                arr[i + 1] = y;
+                arr[i + 2] = z;
+                arr[i + 3] = 1;
+            }
+
+        }
+
+
+        const circleGeometry = new THREE.CircleGeometry(1, 32);
+
+        const geometry = new THREE.InstancedBufferGeometry();
+        geometry.index = circleGeometry.index;
+        geometry.attributes = circleGeometry.attributes;
+        geometry.computeVertexNormals();
+
+        const particleCount = WIDTH * WIDTH; //75000;
+
+        const translateArray = new Float32Array(particleCount * 3);
+        let reference = new Float32Array(particleCount * 2);
+
+        for (var i = 0; i < particleCount; i++) {
+
+            translateArray[i + 0] = Math.random() * 10 - 1; // 50
+            translateArray[i + 1] = Math.random() * 100 - 1; //200
+            translateArray[i + 2] = Math.random() * 50 - 1; // 100
+
+            // uvs
+            let xx = (i % WIDTH) / WIDTH;
+            let yy = ~~(i / WIDTH) / WIDTH;
+
+            reference.set([xx, yy], i * 2);
+
+        }
+
+
+        geometry.setAttribute('translate', new THREE.InstancedBufferAttribute(translateArray, 3));
+        geometry.setAttribute('reference', new THREE.InstancedBufferAttribute(reference, 2));
+
+
+
+
+        var mytexture = new THREE.TextureLoader().load('test.jpg');
+        // cf https://jsfiddle.net/prisoner849/z3yfw208/
+        mytexture = new THREE.TextureLoader().load("https://threejs.org/examples/textures/sprites/ball.png", t => {
+            t.center.setScalar(0.5);
+            t.rotation = -Math.PI * 0.5;
+        });
+        mytexture.mapping = THREE.SphericalReflectionMapping;
+
+        var phongShader = THREE.ShaderLib.phong;
+        var uniforms = THREE.UniformsUtils.clone(phongShader.uniforms)
+
+        var myuniform = ({
+            map: {
+                value: mytexture
+            },
+            time: new THREE.Uniform(0),
+            texturePosition: {
+                value: null
+            },
+            delta: {
+                value: 0.0
+            },
+            resolution: {
+                type: 'v4',
+                value: new THREE.Vector4()
+            }
+        });
+
+
+
+        material = new THREE.ShaderMaterial({
+            uniforms: myuniform,
+            vertexShader: document.getElementById('vshader').textContent,
+            fragmentShader: document.getElementById('fshader').textContent,
+            depthTest: true,
+            depthWrite: true,
+            roughness: 1,
+            fog: true,
+            extensions: {
+                derivatives: '#extension GL_OES_standard_derivatives :enable',
+            }
+        });
+
+
+
+
+        mesh = new THREE.Mesh(geometry, material);
+        mesh.scale.set(500, 500, 500);
+        scene.add(mesh);
+
+
+
+
+        var clock = new THREE.Clock();
+        clock.start();
+
+        function getStepSize(filterLen, tapsPerPass, pass) {
+
+            return filterLen * Math.pow(tapsPerPass, -pass);
+
+        }
+
+        function filterGodRays(inputTex, renderTarget, stepSize) {
+
+            postprocessing.scene.overrideMaterial = postprocessing.materialGodraysGenerate;
+
+            postprocessing.godrayGenUniforms["fStepSize"].value = stepSize;
+            postprocessing.godrayGenUniforms["tInput"].value = inputTex;
+
+            renderer.setRenderTarget(renderTarget);
+            renderer.render(postprocessing.scene, postprocessing.camera);
+            postprocessing.scene.overrideMaterial = null;
+
+        }
+
+
+
+
+        const animate = function() {
+
+
+
+            const time = Date.now() * 0.0005;
+
+
+            //mesh.rotation.x = time * 0.25;
+            //mesh.rotation.y = time * 0.2;
+
+            //mesh.rotation.z = time * 0.2; 
+
+
+
+            positionVariable.material.uniforms.time.value = clock.getElapsedTime();
+            gpuCompute.compute();
+
+            material.uniforms.texturePosition.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
+
+            let t = clock.getElapsedTime();
+
+
+
+            mesh.geometry.attributes.position.needsUpdate = true;
+            mesh.geometry.attributes.translate.needsUpdate = true;
+            material.uniforms.needsUpdate = true;
+            material.needsUpdate = true;
+            material.uniforms.time.value = t;
+
+// x: -0.015879045945020476, y: 35.29226427390525, z: -0.7939522972538239 
+            if(shadowing){
+            	if(camera.position.x > -0.0159)
+					camera.position.x-=0.5;
+				if(camera.position.z > 18){
+					//camera.position.z-=10;
+					if(camera.position.z < 400)
+						camera.position.z-=20;
+					else
+						camera.position.z-=10;
 				}
-
-			}
-
-
-				const circleGeometry = new THREE.CircleGeometry(1, 32);
-
-				const geometry = new THREE.InstancedBufferGeometry();
-			geometry.index = circleGeometry.index;
-			geometry.attributes = circleGeometry.attributes;
-			geometry.computeVertexNormals();
-
-				const particleCount = WIDTH*WIDTH;//75000;
-
-			const translateArray = new Float32Array( particleCount * 3 );
-			let reference = new Float32Array( particleCount * 2 );
-
-			for ( var i = 0; i < particleCount; i ++ ) {
-
-				translateArray[ i + 0 ] = Math.random() * 10 - 1; // 50
-				translateArray[ i + 1 ] = Math.random() * 100 - 1; //200
-				translateArray[ i + 2 ] = Math.random() * 50 - 1; // 100
-
-				// uvs
-				let xx = (i%WIDTH)/WIDTH;
-				let yy = ~~(i/WIDTH)/WIDTH;
-
-				reference.set([xx,yy],i*2);
-
-			}
-
-
-			geometry.setAttribute( 'translate', new THREE.InstancedBufferAttribute( translateArray, 3 ) );
-			geometry.setAttribute( 'reference', new THREE.InstancedBufferAttribute( reference, 2 ) );
-
+				if(camera.position.y > 35){
+					if(camera.position.z < 400)
+						camera.position.y-=0.5;
+					else
+						camera.position.y-=0.01;
+				}
+				if(colorval > 0){
+					colorval-=0.5;
+					document.getElementById("poem").style.color= 'rgb(' + colorval + ',' + colorval + ',' + colorval + ')';
+				}
 			
+            }
+
+            composer.render();
+
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        };
 
 
-			var mytexture = new THREE.TextureLoader().load( 'test.jpg' );
-// cf https://jsfiddle.net/prisoner849/z3yfw208/
-			mytexture = new THREE.TextureLoader().load("https://threejs.org/examples/textures/sprites/ball.png", t => {
-   		 t.center.setScalar(0.5);
-    	t.rotation = -Math.PI * 0.5;
-    });
-			mytexture.mapping = THREE.SphericalReflectionMapping;
+        animate();
+    </script>
+</body>
 
-			var phongShader = THREE.ShaderLib.phong;
-			var uniforms = THREE.UniformsUtils.clone(phongShader.uniforms)
-
-			var myuniform = ({
-					map: { value: mytexture },
-					time: new THREE.Uniform(0),
-					texturePosition: {value: null},
-					delta: { value: 0.0 },
-					resolution: {  type: 'v4', value: new THREE.Vector4() }
-				});
-
-
-
-			material = new THREE.ShaderMaterial( {
-				uniforms: myuniform,
-				vertexShader: document.getElementById( 'vshader' ).textContent,
-				fragmentShader: document.getElementById( 'fshader' ).textContent, 
-				depthTest: true,
-				depthWrite: true,
-				roughness: 1,
-				fog: true,
-				 extensions: {
-        derivatives: '#extension GL_OES_standard_derivatives :enable',
-      }
-			} );
-
-
-
-
-			mesh = new THREE.Mesh( geometry, material ) ; 
-			mesh.scale.set( 500, 500, 500 );
-			scene.add( mesh );
-
-
-
-		
-
-			var clock = new THREE.Clock();
-    		clock.start();
-
-    		function getStepSize( filterLen, tapsPerPass, pass ) {
-
-				return filterLen * Math.pow( tapsPerPass, - pass );
-
-			}
-
-			function filterGodRays( inputTex, renderTarget, stepSize ) {
-
-				postprocessing.scene.overrideMaterial = postprocessing.materialGodraysGenerate;
-
-				postprocessing.godrayGenUniforms[ "fStepSize" ].value = stepSize;
-				postprocessing.godrayGenUniforms[ "tInput" ].value = inputTex;
-
-				renderer.setRenderTarget( renderTarget );
-				renderer.render( postprocessing.scene, postprocessing.camera );
-				postprocessing.scene.overrideMaterial = null;
-
-			}
-
-
-
-
-
-
-			const animate = function () {
-
-			
-
-				const time = Date.now() * 0.0005;
-
-
-				//mesh.rotation.x = time * 0.25;
-				//mesh.rotation.y = time * 0.2;
-
-				//mesh.rotation.z = time * 0.2; 
-
-
-			
-				positionVariable.material.uniforms.time.value = clock.getElapsedTime();
-				gpuCompute.compute();
-
-				material.uniforms.texturePosition.value = gpuCompute.getCurrentRenderTarget(positionVariable).texture;
-
-				let t =  clock.getElapsedTime();
-
-
-
-				mesh.geometry.attributes.position.needsUpdate = true;
-				mesh.geometry.attributes.translate.needsUpdate = true;
-				material.uniforms.needsUpdate = true;
-				material.needsUpdate = true; 
-
-
-
-				material.uniforms.time.value = t;
-
-				composer.render();
-
-				requestAnimationFrame( animate );
-				controls.update();
-				renderer.render( scene, camera );
-			};
-
-			
-			animate();
-		</script>
-	</body>
 </html>
