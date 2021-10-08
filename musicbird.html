@@ -357,7 +357,7 @@ var divisions = 5;
 
 function modelLoaded() {
   getPitch(pitch);
-  init();
+  //init();
   //renderer.setClearColor( 0xffffff, 1 );
   //animate();
 }
@@ -521,6 +521,26 @@ const handleSuccess = function(stream) {
 "Na niebie pełznący cierpliwie", 
 "I matkę w oknie", 
 "Z dłonią nad oczami","", // 1
+"Odwróciła twarz do ściany", // enlever birds.  la porte  ? toujours lumière + texte ? 
+"przecież mnie kocha", 
+"dlaczego odwróciła się ode mnie",
+"więc takim ruchem głowy", 
+"można odwrócić się od świata", 
+"na którym ćwierkają wróble",
+ "i młodzi ludzie chodzą", 
+"w krzyczących krawatach", 
+"Ona jest teraz sama", 
+"w obliczu martwej ściany",
+"i tak już zostanie", 
+"zostanie pod ścianą",
+ "ogromniejącą", 
+"skręcona i mała", 
+"z zaciśniętą pięścią", 
+"a ja siedzę", 
+"z kamiennymi nogami", 
+"i nie porywam jej z tego miejsca", 
+"nie unoszę", 
+"lżejszej niż westchnienie","",
 "W ciemnym pokoju",
  "na stole stoi kieliszek", 
 "czerwonego wina", 
@@ -573,8 +593,8 @@ const handleSuccess = function(stream) {
 "ojciec drzemie pod piecem",
  "po sześciu dniach pracy.", 
 "Nie - przecież nie mogę im",
- "powiedzieć że człowiek człowiekowi", 
-"skacze do gardła"
+ "powiedzieć że", 
+ "człowiek człowiekowi skacze do gardła"
 
     ]
 
@@ -588,6 +608,11 @@ const handleSuccess = function(stream) {
     var interludeback = false;
     var state=1
 
+
+   window.addEventListener('load', function () {
+  init();
+  animate();
+})
 
  function launchAnim(maxval){
 
@@ -654,9 +679,9 @@ const handleSuccess = function(stream) {
             }); // not-visible
     }
 
-    			if(words[index]=="Kiedy zamknę oczy to słyszę"){
-				            animate();
-				 } 
+    			//if(words[index]=="Kiedy zamknę oczy to słyszę"){
+				 //           animate();
+				 //} 
 
 
                 if( motcount < message.length){
@@ -1060,29 +1085,35 @@ const handleSuccess = function(stream) {
 				if ( delta > 1 ) delta = 1; // safety cap on large deltas
 				last = now;
 
-				positionUniforms[ 'time' ].value = now;
-				positionUniforms[ 'delta' ].value = delta;
-				velocityUniforms[ 'time' ].value = now;
-				velocityUniforms[ 'delta' ].value = delta;
-				birdUniforms[ 'time' ].value = now;
-				birdUniforms[ 'delta' ].value = delta;
+				//if (typeof positionUniforms != 'undefined'){ 
+				//	console.log("wait bb")
+				//}
+				//else{
+				if (typeof positionUniforms != 'undefined'){ 
+					positionUniforms[ 'time' ].value = now;
+					positionUniforms[ 'delta' ].value = delta;
+					velocityUniforms[ 'time' ].value = now;
+					velocityUniforms[ 'delta' ].value = delta;
+					birdUniforms[ 'time' ].value = now;
+					birdUniforms[ 'delta' ].value = delta;
 
-				velocityUniforms[ 'predator' ].value.set( 0.5 * mouseX / windowHalfX, - 0.5 * mouseY / windowHalfY, 0 );
+					velocityUniforms[ 'predator' ].value.set( 0.5 * mouseX / windowHalfX, - 0.5 * mouseY / windowHalfY, 0 );
 
-				mouseX = 10000;
-				mouseY = 10000;
+					mouseX = 10000;
+					mouseY = 10000;
 
-				gpuCompute.compute();
+					gpuCompute.compute();
 
-				birdUniforms[ 'texturePosition' ].value = gpuCompute.getCurrentRenderTarget( positionVariable ).texture;
-				birdUniforms[ 'textureVelocity' ].value = gpuCompute.getCurrentRenderTarget( velocityVariable ).texture;
-				velocityUniforms.separationDistance.value=slider.value;
+					birdUniforms[ 'texturePosition' ].value = gpuCompute.getCurrentRenderTarget( positionVariable ).texture;
+					birdUniforms[ 'textureVelocity' ].value = gpuCompute.getCurrentRenderTarget( velocityVariable ).texture;
+					velocityUniforms.separationDistance.value=slider.value;
 
 
-				if(interlude){
-	                console.log("interlude")
-	                launchAnim(100);
-	            }
+					if(interlude){
+		                console.log("interlude")
+		                launchAnim(100);
+		            }
+	       		}
 
 				renderer.render( scene, camera );
 

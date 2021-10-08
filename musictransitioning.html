@@ -35,7 +35,7 @@
   animation-name: fade;
   animation-fill-mode: none; /*both */
   animation-iteration-count: 1;
-  animation-duration: 5s;
+  animation-duration: 2s; /* 5s */
   animation-direction: reverse;/*alternate-reverse; */ 
 }
 
@@ -62,7 +62,7 @@
 
 <body>
 <div style="position:absolute; width:50%; display:none" id="status"></div>
-<input id="slider" type="range" min="0.05" max="1" step="0.0001" value="0." style="display: none; position:absolute;width:300px;">
+<input id="slider" type="range" min="0.0001" max="1" step="0.0001" value="0." style="display: none; position:absolute;width:300px;">
         <div id="myscene"></div>
         <div id="poem"></div>
 
@@ -87,7 +87,7 @@
 
         attribute vec3 translate;
         attribute vec3 torus;
-        attribute vec3 knot;
+        //attribute vec3 knot;
         //attribute vec3 bird;
         attribute vec2 reference;
 
@@ -95,6 +95,7 @@
         varying vec2 vUv;
         varying float vScale;
         varying vec3 tmpPos;
+        varying vec4 mvPosition;
 
         varying vec3 vColor; 
         attribute vec3 color;
@@ -150,7 +151,7 @@
             else if(state == 2){
 
                 
-                tmpPos = mix(knot, translate, interpolation);
+                tmpPos = mix ( texture2D( texturePosition, reference ).xyz,  translate, interpolation);
 
             }
             else if(state == 3){ // 
@@ -168,17 +169,22 @@
                 tmpPos = mix ( texture2D( texturePosition, reference ).xyz,  translate, interpolation);
 
             }
-           else if(state >= 6 && state!=10){ 
+           else if(state >= 6 && state<11){ 
 
 
                 tmpPos = mix ( texture2D( texturePosition, reference ).xyz,  translate, interpolation);
 
             }
-            else if(state==10){ // tentative de mer 
+            else if(state==11){ 
+
+
+                tmpPos = mix ( texture2D( texturePosition, reference ).xyz,  torus, interpolation);
+
+            }
+            else if(state==12){ 
 
 
                 tmpPos = mix ( texture2D( texturePosition, reference ).xyz,  translate, interpolation);
-                tmpPos.x = sigmoid(tmpPos.x);
 
             }
 
@@ -192,9 +198,19 @@
                 //tmpPos.y = sin(time*0.5);  // pour les ailes
 
 
+            // La mer
+            if(state>=7 && state<=11)
+            {
+                float s_contrib = 0.6*sin(tmpPos.x*2.5 + 0.2* time);
+                float t_contrib = 0.8*cos(tmpPos.y*4.1 + 0.5* time);
+                float height = s_contrib*t_contrib;
+                mvPosition = modelViewMatrix * vec4(vec3(tmpPos.xy, height), 1.0 ); 
+
+            }
+            else
+                mvPosition = modelViewMatrix * vec4( tmpPos, 1.0 ); // translate pour aucun mouvement au lieu de tempPos
             
 
-            vec4 mvPosition = modelViewMatrix * vec4( tmpPos, 1.0 ); // translate pour aucun mouvement au lieu de tempPos
             vec3 trTime = vec3(tmpPos.x + time,tmpPos.y + time,tmpPos.z + time);
             float scale =  sin( trTime.x * 2.1 ) + sin( trTime.y * 3.2 ) + sin( trTime.z * 4.3 ); //2.1
             vScale = scale;
@@ -202,15 +218,6 @@
         
             mvPosition.xyz += (position) * scale;
 
-
-            // EYES   0.1 si yeux
-            /*
-            if(state==2 && interpolation==1.){
-                mvPosition.xyz += (position) * 0.5; 
-            }
-            else{
-                mvPosition.xyz += (position) * scale; 
-            } */
 
             vUv = uv;
 
@@ -610,16 +617,7 @@ const handleSuccess = function(stream) {
     }
 
     startPitch();
-/*
-    processor.onaudioprocess = function(e) {
-        //console.log("il y a audio", pitch)
-      // Do something with the data, e.g. convert it to WAV
-      //console.log(e.inputBuffer);
-       getPitch(pitch)
-       volumeAudioProcess(e)
 
-
-    }; */
   };
 
   navigator.mediaDevices.getUserMedia({ audio: true, video: false })
@@ -689,9 +687,9 @@ const handleSuccess = function(stream) {
     "Nic...",
     "i ona nigdy nie zobaczy morza...",
     "i nigdy nie zobaczę jej Twarzy i oczu i uśmiechu kiedy patrzy na morze...",
-    "poeta." 
+    "poeta." , "","",""
     ]
-
+// directly to birds
     var words2 = [
 "Odwróciła twarz do ściany", // la porte  ? toujours lumière + texte ? 
 "przecież mnie kocha", 
@@ -818,12 +816,19 @@ const handleSuccess = function(stream) {
         }
         else{
             interludeback=true;
-            slider.value= (Math.max(0.05,parseFloat(slider.value)-0.001)).toString()
-            if(parseFloat(slider.value)==0.05){
+            slider.value= (Math.max(0.0001,parseFloat(slider.value)-0.001)).toString()
+            if(parseFloat(slider.value)==0.0001){
 
+                // fin de l'interlude
                 if(interlude){
                     material.uniforms.state.value++;
-                    console.log(material.uniforms.state.value);
+                    console.log("state", material.uniforms.state.value);
+                    if(material.uniforms.state.value== 7){
+
+                         mesh.rotateY(400);
+                         mesh.translateY(300);
+
+                    }
 
                     //if(state==2)
                     //    camera.position.set(654,769,-4)
@@ -849,8 +854,8 @@ const handleSuccess = function(stream) {
         if(slider.value<maxval && dirRotation==1){
             slider.value=(parseFloat(slider.value)+0.001).toString()
         }
-        else if(slider.value>0.05 && dirRotation==-1){
-            slider.value= (Math.max(0.05,parseFloat(slider.value)-0.001)).toString()
+        else if(slider.value>0.0001 && dirRotation==-1){
+            slider.value= (Math.max(0.0001,parseFloat(slider.value)-0.001)).toString()
         } 
  }
 
@@ -889,6 +894,30 @@ const handleSuccess = function(stream) {
                             motcount=0;
                             interlude = true;
                             index++;
+
+                            // attendre avant jesus
+                            if(index>=words.length && !shadowing){
+
+                                console.log("nouveau poeme")
+
+                                    index=0;
+                                    words=words2;
+                                    shadowing=true;
+                                    timeSentence=1000;
+                                    timeWord=1000; //
+                                    jesus.scale.x=0.2
+                                    jesus.scale.y=0.2
+                                    jesus.scale.z=0.2;
+                                    jesus.scale.set(0.000002,0.000002,0.000002)
+                                    jesus.visible=true;
+                                    jesus.translateZ(-1000)
+
+
+                                
+                                // ici changer texte et lancer le shadowing
+                                //clearTimeout(interval);
+                            }
+
                             setTimeout(extraire, timeParagraph);
                         }
 
@@ -923,32 +952,15 @@ const handleSuccess = function(stream) {
                     }
                     // error
 
-                    index++
+                    index++;
                     motcount=0;
+                    
+
+                    console.log("change",index, words.length, index>=words.length,  index==62)
+                    
+                    
                     setTimeout(extraire, timeSentence);
 
-                    // attendre avant jesus
-                    if(index>=words.length && !shadowing){
-
-                        setTimeout(function(){
-                            index=0;
-                            words=words2;
-                            shadowing=true;
-                            timeSentence=1000;
-                            timeWord=1000; //
-                            jesus.scale.x=0.2
-                            jesus.scale.y=0.2
-                            jesus.scale.z=0.2;
-                            jesus.scale.set(0.000002,0.000002,0.000002)
-                            jesus.visible=true;
-                            jesus.translateZ(-1000)
-
-                        }, 3000);
-
-                        
-                        // ici changer texte et lancer le shadowing
-                        //clearTimeout(interval);
-                    }
                 }
             }
              
@@ -998,7 +1010,7 @@ const handleSuccess = function(stream) {
 // camera mer :  Object { x: 783.0342149070423, y: 554.3460349009379, z: 10.387101352834648 }
 // camera fenetre : Object { x: 260.1867191519565, y: 275.8385476581119, z: -1643.6289060093336 } 
 
-        slider.value="0.05";
+        slider.value="0.0001";
         const BOUNDS = 10, BOUNDS_HALF = BOUNDS / 2;
 
 
@@ -1039,7 +1051,7 @@ const handleSuccess = function(stream) {
 
 
         // FBO particles
-        const WIDTH = 512;
+        const WIDTH = 128;
         initGPGPU();
 
         function initGPGPU() {
@@ -1208,7 +1220,7 @@ const handleSuccess = function(stream) {
 
         geometry.setAttribute('torus', new THREE.InstancedBufferAttribute(mytorus, 3));
 
-
+/*
         let knot = new Float32Array( WIDTH * WIDTH * 3);
         tor =  new THREE.SphereBufferGeometry(3, 100., 50, WIDTH * WIDTH).attributes.position.array;
 
@@ -1224,7 +1236,7 @@ const handleSuccess = function(stream) {
 
         } 
 
-        geometry.setAttribute('knot', new THREE.InstancedBufferAttribute(knot, 3));
+        geometry.setAttribute('knot', new THREE.InstancedBufferAttribute(knot, 3)); */
 
 
         // uvs
@@ -1255,9 +1267,8 @@ geometry.addAttribute( 'frequency', new THREE.InstancedBufferAttribute( attrFreq
 
 
 
-        var mytexture = new THREE.TextureLoader().load('test.jpg');
         // cf https://jsfiddle.net/prisoner849/z3yfw208/
-        mytexture = new THREE.TextureLoader().load("https://threejs.org/examples/textures/sprites/ball.png", t => {
+        mytexture = new THREE.TextureLoader().load("ball.png", t => {
             t.center.setScalar(0.5);
             t.rotation = -Math.PI * 0.5;
         });
@@ -1401,46 +1412,50 @@ var dirRotation = 1
 
             if(rotationZ){ 
 
-                if(material.uniforms.state.value==5){
+                if(material.uniforms.state.value==5 || material.uniforms.state.value== 6){
                     mesh.rotation.z = dirRotation * time * 0.0000005 * delta; 
                     mesh.rotation.x=0;
                     mesh.rotation.y=0;
                 } //|| material.uniforms.state.value==1)
-                if(material.uniforms.state.value==4 || material.uniforms.state.value==2){
+                if(material.uniforms.state.value==4){
                     mesh.rotation.z =0;
                     mesh.rotation.x =0;
                     mesh.rotation.y = dirRotation * time * 0.0000005 * delta;
                 }
-                if(material.uniforms.state.value==3){
+                if(material.uniforms.state.value==3 || material.uniforms.state.value==2){
                     mesh.rotation.z = 0;
                     mesh.rotation.y = 0;
                     mesh.rotation.x = dirRotation * time * 0.0000005 * delta; 
                 }
-                if(material.uniforms.state.value== 6){
+                /*if(material.uniforms.state.value== 6){
                     mesh.rotation.z = 0;
                     mesh.rotation.y = 0;
                     mesh.rotation.x = dirRotation * time * 0.0000005 * delta;
                     
 
-                }
-                if(material.uniforms.state.value== 7){
-                    mesh.rotation.z = 0;
+                } */
+                if(material.uniforms.state.value== 9){ // test
+                   /* mesh.rotation.y = 0;
                     mesh.rotation.x = 0;
-                    mesh.rotation.y = dirRotation * time * 0.0000005 * delta;
+                    mesh.rotation.z = time * 0.0000005 * delta; */
 
                 }
-                if(material.uniforms.state.value==1){
+                if(material.uniforms.state.value== 9 || material.uniforms.state.value==1 || material.uniforms.state.value==12 || material.uniforms.state.value==11 || material.uniforms.state.value==10 || material.uniforms.state.value==7 || material.uniforms.state.value==8){
 
                     // interpolation
                     shortinterlude(0.5);
 
+                    mesh.rotation.z = 0;
+                    mesh.rotation.y = 0;
+                    mesh.rotation.x = 0;
+
                 }
-                if(material.uniforms.state.value==10){
+               /* if(material.uniforms.state.value==11 || material.uniforms.state.value==10 || material.uniforms.state.value==7){ 
 
                     // interpolation
                     shortinterlude(1.);
 
-                } 
+                } */
  
 
                 delta+=0.000005;
@@ -1455,41 +1470,7 @@ var dirRotation = 1
 
 // mer rotateZ(-249.76)
 
-            // CAMERA MOVEMENT
-
-            if(material.uniforms.state.value== 6){
-                console.log("modifier camera 6")
-                /*if(camera.position.z<-300)
-                        camera.position.z+=1
-                    else if(camera.position.z>-300)
-                        camera.position.z-=1
-                    */
-
-                }
-                if(material.uniforms.state.value== 7){
-
-                    if(camera.position.z<-300)
-                        camera.position.z+=1
-                    else if(camera.position.z>-300)
-                        camera.position.z-=1
-
-                }
-            if(material.uniforms.state.value==10){ // deplacer le mesh
-                /* mesh.translateZ(-100)
-                 camera.position.x=654
-                 camera.position.y=769
-                 camera.position.z=-4
-                */
-            }
-                       
-            if(material.uniforms.state.value==2 && camera.position.y!=-1009){
-             /*   console.log("modifier camera 2")
-                if(camera.position.y<-1009)
-                    camera.position.y+=1
-                else
-                    camera.position.y-=1 */
-            }
-                        
+           
 
 
             // Animation entre paragraphes
